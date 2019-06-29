@@ -4,6 +4,11 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+
+import org.apache.camel.CamelContext;
+import org.apache.camel.Exchange;
+import org.apache.camel.ProducerTemplate;
+import org.apache.camel.builder.ExchangeBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,6 +24,7 @@ import org.springframework.web.servlet.view.RedirectView;
 import com.hashtek.web.bean.BulkRequestBean;
 import com.hashtek.web.component.BulkUploadComponent;
 import com.hashtek.web.entity.BulkRequest;
+import com.hashtek.web.entity.Request;
 import com.hashtek.web.repository.BulkRequestRepository;
 import org.springframework.web.bind.annotation.RequestParam;
 
@@ -32,6 +38,12 @@ public class BulkRequestController {
 	
 	@Autowired
 	private BulkRequestRepository repository; 
+	
+	@Autowired
+	CamelContext camelContext;
+	
+	@Autowired
+	ProducerTemplate producerTemplate;
 	
 	@GetMapping("/")	
 	public RedirectView renderUploadForm() {
@@ -49,6 +61,14 @@ public class BulkRequestController {
 	public Optional<BulkRequest> getBulkRequestById(@PathVariable String orgId, @PathVariable String requestId) {
 		//TODO:: Need to compare the OrgID of bulk request with logged in user orgid from profile 
 		Optional<BulkRequest> request = this.repository.findById(requestId);
+		
+		//Invoking Camel Route to kick start the bulk request orchestration		
+		if(request.isPresent()) {
+			List<Request> requests = request.get().getRequests();// Retrieve all individual requests in bulk order
+			Exchange exchange = ExchangeBuilder.anExchange(camelContext).withBody(requests).build();
+			Exchange response = producerTemplate.send("direct:OrchestrateRequest", exchange);
+			logger.info("Respone Returned from Camel Route:" + response.getOut().getBody());
+		}	
 		return request;
 	}
 	
