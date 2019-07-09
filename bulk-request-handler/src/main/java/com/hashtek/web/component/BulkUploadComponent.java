@@ -15,12 +15,12 @@ import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Component;
 import com.hashtek.web.bean.BulkRequestBean;
+import com.hashtek.web.constants.BulkRequestState;
+import com.hashtek.web.constants.ChangeTypeAVPN;
+import com.hashtek.web.constants.RequestState;
 import com.hashtek.web.entity.BulkRequest;
 import com.hashtek.web.entity.ChangePortSpeed;
 import com.hashtek.web.entity.Request;
-import com.hashtek.web.enums.BulkRequestState;
-import com.hashtek.web.enums.ChangeTypeAVPN;
-import com.hashtek.web.enums.RequestState;
 
 @Component
 public class BulkUploadComponent {

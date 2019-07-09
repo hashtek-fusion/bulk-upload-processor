@@ -1,6 +1,6 @@
 package com.hashtek.web.entity;
 
-import com.hashtek.web.enums.ChangeTypeAVPN;
+import com.hashtek.web.constants.ChangeTypeAVPN;
 
 public class Request {	
 

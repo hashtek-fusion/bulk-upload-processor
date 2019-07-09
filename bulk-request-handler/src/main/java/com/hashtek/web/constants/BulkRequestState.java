@@ -1,4 +1,4 @@
-package com.hashtek.web.enums;
+package com.hashtek.web.constants;
 
 public enum BulkRequestState {
 	ACCEPTED,

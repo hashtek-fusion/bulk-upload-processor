@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-
 import org.apache.camel.CamelContext;
 import org.apache.camel.Exchange;
 import org.apache.camel.ProducerTemplate;
@@ -12,6 +11,7 @@ import org.apache.camel.builder.ExchangeBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 //import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -23,8 +23,8 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.view.RedirectView;
 import com.hashtek.web.bean.BulkRequestBean;
 import com.hashtek.web.component.BulkUploadComponent;
+import com.hashtek.web.constants.BulkRequestState;
 import com.hashtek.web.entity.BulkRequest;
-import com.hashtek.web.entity.Request;
 import com.hashtek.web.repository.BulkRequestRepository;
 import org.springframework.web.bind.annotation.RequestParam;
 
@@ -50,26 +50,39 @@ public class BulkRequestController {
 		return new RedirectView("index.html");
 	}
 	
-	@GetMapping("/bulk-requests/{orgId}")
+	@GetMapping("/bulk-requests/org/{orgId}")
 	public List<BulkRequest> getBulkRequests(@PathVariable String orgId) {
 		List<BulkRequest> bulkRequests= this.repository.findByOrgId(orgId);
 		return bulkRequests;
 		
 	}
 	
-	@GetMapping("/bulk-requests/{orgId}/request/{requestId}")
+	@GetMapping("/bulk-requests/org/{orgId}/request/{requestId}")
 	public Optional<BulkRequest> getBulkRequestById(@PathVariable String orgId, @PathVariable String requestId) {
 		//TODO:: Need to compare the OrgID of bulk request with logged in user orgid from profile 
-		Optional<BulkRequest> request = this.repository.findById(requestId);
+		Optional<BulkRequest> request = this.repository.findById(requestId);		
+		return request;
+	}
+	
+	@GetMapping("/bulk-requests/org/{orgId}/request/{requestId}/orchestrate")
+	public ResponseEntity<Object> orchestrateBulkRequest(@PathVariable String orgId, @PathVariable String requestId) throws Exception {
+		Exchange response = null;
 		
+		Optional<BulkRequest> request = this.repository.findById(requestId);
 		//Invoking Camel Route to kick start the bulk request orchestration		
 		if(request.isPresent()) {
-			List<Request> requests = request.get().getRequests();// Retrieve all individual requests in bulk order
-			Exchange exchange = ExchangeBuilder.anExchange(camelContext).withBody(requests).build();
-			Exchange response = producerTemplate.send("direct:OrchestrateRequest", exchange);
-			logger.info("Respone Returned from Camel Route:" + response.getOut().getBody());
-		}	
-		return request;
+			if(request.get().getState().equals(BulkRequestState.ACCEPTED.toString())) {
+				Exchange exchange = ExchangeBuilder.anExchange(camelContext).withBody(request.get()).build();			
+				response = producerTemplate.send("direct:OrchestrateRequest", exchange);
+				logger.info("Respone Returned from Camel Route:" + response.getIn().getBody());
+			} else {
+				return ResponseEntity.badRequest().build();
+			}
+			
+		}else {
+			return ResponseEntity.notFound().build();
+		}
+		return ResponseEntity.ok(response.getIn().getBody());
 	}
 	
 	@PostMapping("/bulk-requests")
